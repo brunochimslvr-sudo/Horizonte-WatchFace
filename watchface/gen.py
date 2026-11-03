@@ -588,9 +588,10 @@ def build_watchface():
     A(f'<PartDraw x="{BAR_X}" y="{round(HZ) + 1}" width="{BAR_W}" height="2"><Rectangle x="0" y="0" width="{BAR_W}" height="2">'
       '<Fill color="#33FFFFFF"/></Rectangle></PartDraw>')
     for col, cond in BAT_LEVELS:
-        A(f'<PartDraw x="{BAR_X}" y="{round(HZ) - 1}" width="{BAR_W}" height="4"><Transform target="alpha" value="{esc(f"({cond}) ? 255 : 0")}"/>'
-          f'<Rectangle x="0" y="0" width="{BAR_W}" height="4"><Transform target="width" value="{esc(f"clamp({BAR_W} * {BAT} / 100, 4, {BAR_W})")}"/>'
-          f'<Fill color="{col}"/></Rectangle></PartDraw>')
+        # largura variável via scaleX (Transform em width de formas faz o runtime recusar a face)
+        A(f'<PartDraw x="{BAR_X}" y="{round(HZ) - 1}" width="{BAR_W}" height="4" pivotX="0" pivotY="0.5"><Transform target="alpha" value="{esc(f"({cond}) ? 255 : 0")}"/>'
+          f'<Transform target="scaleX" value="{esc(f"clamp({BAT} / 100, 0.01, 1)")}"/>'
+          f'<Rectangle x="0" y="0" width="{BAR_W}" height="4"><Fill color="{col}"/></Rectangle></PartDraw>')
     A(f'<PartDraw x="0" y="{round(HZ) - 4}" width="10" height="10"><Transform target="x" value="{esc(f"{BAR_X} + {BAR_W} * {BAT} / 100 - 5")}"/>'
       '<Ellipse x="0" y="0" width="10" height="10"><Fill color="#FFFFFFFF"/></Ellipse></PartDraw>')
 
@@ -601,9 +602,9 @@ def build_watchface():
       '<Stroke thickness="1.5" color="#E6FFFFFF"/></Rectangle></PartDraw>')
     A('<PartDraw x="229" y="278" width="2" height="6"><Rectangle x="0" y="0" width="2" height="6"><Fill color="#E6FFFFFF"/></Rectangle></PartDraw>')
     for col, cond in BAT_LEVELS:
-        A(f'<PartDraw x="208" y="277" width="18" height="8"><Transform target="alpha" value="{esc(f"({cond}) ? 255 : 0")}"/>'
-          f'<Rectangle x="0" y="0" width="18" height="8"><Transform target="width" value="{esc(f"clamp(18 * {BAT} / 100, 1, 18)")}"/>'
-          f'<Fill color="{col}"/></Rectangle></PartDraw>')
+        A(f'<PartDraw x="208" y="277" width="18" height="8" pivotX="0" pivotY="0.5"><Transform target="alpha" value="{esc(f"({cond}) ? 255 : 0")}"/>'
+          f'<Transform target="scaleX" value="{esc(f"clamp({BAT} / 100, 0.02, 1)")}"/>'
+          f'<Rectangle x="0" y="0" width="18" height="8"><Fill color="{col}"/></Rectangle></PartDraw>')
     A(text(236, 270, 56, 24, 16, '%s%%', ['[BATTERY_PERCENT]'], align='START', weight='BOLD', color='#FFFFFFFF'))
     A('</Group>')
 
