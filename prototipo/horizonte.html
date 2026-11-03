@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Horizonte – Galeria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0f14;--panel:#161922;--line:#262a35;--text:#e9ecf2;--muted:#8b93a5}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}
+svg text{font-family:Outfit,sans-serif;font-feature-settings:"tnum"}
+h1,h2{font-family:Outfit,sans-serif;font-weight:600}
+.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+
+/* Destaque: relógio no estilo Galaxy Watch 8, com fundo na cor do momento */
+.hero{transition:background 1s}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:center;padding-top:48px;padding-bottom:48px}
+.hero h1{font-size:40px;margin:0 0 8px;color:#fff}
+.hero p{margin:0 0 6px;color:rgba(255,255,255,.8);line-height:1.6;max-width:44ch}
+.hero .now{font-family:Outfit,sans-serif;font-size:15px;color:rgba(255,255,255,.7);margin-top:16px}
+.custom{margin-top:24px;max-width:440px}
+.custom-h{font-family:Outfit,sans-serif;font-size:16px;font-weight:600;color:#fff}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.slots label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:rgba(255,255,255,.7);text-align:left}
+.slots select{font:inherit;font-size:14px;color:#fff;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px 10px;cursor:pointer}
+.slots option{color:#111;background:#fff}
+.gw{position:relative;width:min(100%,360px);margin:0 auto}
+.gw .strap{width:58%;height:90px;margin:0 auto;background:linear-gradient(90deg,#1e2025,#33363d 50%,#1e2025)}
+.gw .strap.top{border-radius:22px 22px 0 0}
+.gw .strap.bot{border-radius:0 0 22px 22px}
+.gw .case{position:relative;aspect-ratio:1;border-radius:36%;padding:7%;background:linear-gradient(145deg,#5a5f69,#2a2d33 55%,#1c1e22);box-shadow:0 30px 60px rgba(0,0,0,.45),inset 0 2px 2px rgba(255,255,255,.25)}
+.gw .case::before,.gw .case::after{content:"";position:absolute;right:-2.2%;width:3%;height:11%;border-radius:4px;background:linear-gradient(90deg,#3a3d44,#62666f)}
+.gw .case::before{top:31%}.gw .case::after{top:50%}
+.gw .bezel{width:100%;height:100%;border-radius:50%;padding:3.5%;background:#0a0b0d;box-shadow:inset 0 0 0 2px #2a2d33}
+.gw svg,.mini svg{width:100%;height:100%;display:block;border-radius:50%;background:#000}
+
+.sec{padding:40px 0 8px}
+.sec h2{font-size:24px;margin:0 0 6px}
+.sec > .wrap > p{margin:0 0 22px;color:var(--muted);font-size:14px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px 18px 18px;text-align:center}
+.mini{width:min(100%,220px);aspect-ratio:1;margin:0 auto;border-radius:50%;padding:10px;background:linear-gradient(145deg,#3a3e47,#1b1d22);box-shadow:0 14px 28px rgba(0,0,0,.45)}
+.card b{display:block;font-family:Outfit,sans-serif;font-size:18px;font-weight:600;margin-top:14px}
+.card span{display:block;color:var(--muted);font-size:13px;margin-top:4px;line-height:1.45}
+footer{padding:32px 16px 48px;color:var(--muted);font-size:13px;text-align:center}
+@media (max-width:760px){.hero .wrap{grid-template-columns:1fr;text-align:center}.hero p{margin-left:auto;margin-right:auto}.hero h1{font-size:32px}.custom{margin-left:auto;margin-right:auto}}
+</style>
+</head>
+<body>
+<section class="hero" id="hero"><div class="wrap">
+  <div>
+    <h1>Horizonte</h1>
+    <p>Watch face para o Galaxy Watch 8 (44mm). O céu muda de cor ao longo do dia e o sol, ou a lua, percorre o arco entre o nascer e o pôr do sol, sempre por trás da hora.</p>
+    <p>Nos quatro cantos ficam complicações que você escolhe. No "chão" ficam o clima atual e a previsão das próximas horas.</p>
+    <div class="now" id="now"></div>
+    <div class="custom">
+      <div class="custom-h">Personalizar cantos</div>
+      <div class="slots">
+        <label>↖ Superior esquerdo<select data-slot="0"></select></label>
+        <label>↗ Superior direito<select data-slot="1"></select></label>
+        <label>↙ Inferior esquerdo<select data-slot="2"></select></label>
+        <label>↘ Inferior direito<select data-slot="3"></select></label>
+      </div>
+    </div>
+  </div>
+  <div class="gw">
+    <div class="strap top"></div>
+    <div class="case"><div class="bezel" id="big"></div></div>
+    <div class="strap bot"></div>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <h2>Ao longo do dia</h2>
+  <p>A mesma tela em oito momentos. As cores mudam de forma contínua entre um momento e outro, sem saltos.</p>
+  <div class="grid" id="day"></div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <h2>Tela sempre ligada (AOD)</h2>
+  <p>Fundo preto e hora só no contorno, tingida com a cor do momento. Mantém o horizonte e a posição do sol, gastando o mínimo de bateria.</p>
+  <div class="grid" id="aod"></div>
+</div></section>
+
+<footer>Protótipo em 480×480 · dados de saúde e clima fictícios</footer>
+
+<script>
+const SR=5+25/60, SS=18+15/60; // nascer / pôr do sol
+const D={steps:7432,goal:10000,bpm:72,bat:68,score:82,sleep:'7h12'};
+const DIAS=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+const DIASF=['DOMINGO','SEGUNDA','TERÇA','QUARTA','QUINTA','SEXTA','SÁBADO'];
+const MESES=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+
+// Paleta do céu: [hora, [topo, meio, base]]
+const KF=[
+ [0,  ['#0b1026','#141b3d','#1d2552']],
+ [4.5,['#0f1433','#24264f','#3b2f63']],
+ [5.6,['#3a3a7a','#c06c9a','#f7a98b']],
+ [7,  ['#5aa9e6','#9fd3f0','#fbd3b0']],
+ [10, ['#2f8fe8','#4fc3f7','#a8e6cf']],
+ [13, ['#29a8e0','#46d0c6','#c6ef6a']],
+ [15.5,['#3f86d6','#8fc7e8','#f5c46a']],
+ [17.9,['#4b3b8f','#e0558a','#ff8a3d']],
+ [19, ['#1e1f5a','#5a2d82','#b04a7a']],
+ [20.5,['#0d1430','#1a2150','#2b2d6b']],
+ [24, ['#0b1026','#141b3d','#1d2552']]];
+const hx=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const KFr=KF.map(([t,c])=>[t,c.map(hx)]);
+function pal(h){
+  h=((h%24)+24)%24; let i=0;
+  while(i<KFr.length-2&&h>=KFr[i+1][0]) i++;
+  const [t0,a]=KFr[i],[t1,b]=KFr[i+1], f=(h-t0)/(t1-t0), s=f*f*(3-2*f);
+  return a.map((c,k)=>c.map((v,j)=>v+(b[k][j]-v)*s));
+}
+const css=c=>`rgb(${c.map(Math.round).join(',')})`;
+const mix=(a,b,f)=>a.map((v,i)=>v+(b[i]-v)*f);
+const lum=c=>{const [r,g,b]=c.map(v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4});return .2126*r+.7152*g+.0722*b};
+const W=[255,255,255], K=[0,0,0];
+
+const pad=n=>String(n).padStart(2,'0');
+const fmt=n=>n.toLocaleString('pt-BR');
+const hm=t=>{const m=Math.round(t*60);return pad(Math.floor(m/60)%24)+':'+pad(m%60)};
+const temp=h=>Math.round(19+7*Math.sin((h-9)/12*Math.PI));
+const isNight=h=>{h=((h%24)+24)%24;return h<SR||h>=SS};
+const wx=h=>{const t=((h%24)+24)%24;return isNight(t)?'moon':(t>=14&&t<17?'cloudSun':'sun')};
+const dur=x=>{const m=Math.round(x*60);return Math.floor(m/60)+'h'+pad(m%60)};
+const nextSun=h=>h<SR?'nascer do sol em '+dur(SR-h):h<SS?'pôr do sol em '+dur(SS-h):'nascer do sol em '+dur(24-h+SR);
+function period(h){
+  if(h<SR-.5) return 'Madrugada'; if(h<SR+1) return 'Amanhecer'; if(h<11) return 'Manhã';
+  if(h<15) return 'Meio-dia'; if(h<SS-1) return 'Tarde'; if(h<SS+.8) return 'Pôr do sol';
+  if(h<21) return 'Anoitecer'; return 'Noite';
+}
+
+// Geometria: ângulos em graus, 0 = topo, sentido horário
+const rad=d=>(d-90)*Math.PI/180;
+const P=(r,d,cx=240,cy=240)=>[cx+r*Math.cos(rad(d)),cy+r*Math.sin(rad(d))];
+function arc(r,a0,a1,cx=240,cy=240){
+  if(a1-a0>=360) a1=a0+359.9;
+  const [x0,y0]=P(r,a0,cx,cy),[x1,y1]=P(r,a1,cx,cy);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+const S=b=>`<svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">${b}</svg>`;
+
+// Ícones desenhados numa caixa de 16 unidades centrada em 0
+const I={
+  sun:c=>`<circle r="3.4" fill="${c}"/>`+[0,1,2,3,4,5,6,7].map(i=>{const a=i*Math.PI/4;
+    return `<line x1="${(5.2*Math.cos(a)).toFixed(2)}" y1="${(5.2*Math.sin(a)).toFixed(2)}" x2="${(7.3*Math.cos(a)).toFixed(2)}" y2="${(7.3*Math.sin(a)).toFixed(2)}" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>`}).join(''),
+  moon:c=>`<path d="M1 -6.5A6.5 6.5 0 1 0 1 6.5A3 6.5 0 0 1 1 -6.5Z" fill="${c}"/>`,
+  cloud:c=>`<g fill="${c}"><circle cx="-2.5" cy="0.6" r="3.2"/><circle cx="1.4" cy="-1.4" r="4"/><circle cx="4.6" cy="1.6" r="2.6"/><rect x="-5.7" y="0.6" width="11" height="3.6" rx="1.8"/></g>`,
+  cloudSun:c=>`<g transform="translate(-2.6 -2.6) scale(.72)">${I.sun(c)}</g><g transform="translate(1.6 2) scale(.82)">${I.cloud(c)}</g>`,
+  heart:c=>`<path d="M0 6C-7 1-7.5-5.5-3.5-6.2C-1.6-6.5 0-5 0-3.6C0-5 1.6-6.5 3.5-6.2C7.5-5.5 7 1 0 6Z" fill="${c}"/>`,
+  steps:c=>`<g fill="${c}"><ellipse cx="-2.8" cy="-2" rx="2.3" ry="3.7"/><ellipse cx="2.8" cy="1.6" rx="2.3" ry="3.7"/></g>`,
+  bat:(c,v=1)=>`<rect x="-7" y="-4" width="12.5" height="8" rx="2" fill="none" stroke="${c}" stroke-width="1.4"/><rect x="-5.4" y="-2.4" width="${(9.3*v).toFixed(2)}" height="4.8" rx="1" fill="${c}"/><rect x="6.3" y="-1.8" width="1.6" height="3.6" rx=".8" fill="${c}"/>`,
+  bolt:c=>`<path d="M1.5-7.5L-5 1H-.5L-1.5 7.5L5-1H.5Z" fill="${c}"/>`,
+  flame:c=>`<path d="M0-7.5C1.5-4 5.5-2 5.5 2A5.5 5.5 0 0 1-5.5 2C-5.5-1-3.5-2.5-2.5-4.5C-1.5-2 0-2 0-4Z" fill="${c}"/>`,
+  pin:c=>`<path d="M0 7.5C-4 2-5.5 0-5.5-2A5.5 5.5 0 0 1 5.5-2C5.5 0 4 2 0 7.5ZM0-4.2A2 2 0 1 0 0-.2A2 2 0 1 0 0-4.2Z" fill="${c}" fill-rule="evenodd"/>`,
+  drop:c=>`<path d="M0-7.5C3-3 5.5 0 5.5 2.5A5.5 5.5 0 0 1-5.5 2.5C-5.5 0-3-3 0-7.5Z" fill="${c}"/>`
+};
+const ic=(n,x,y,sz,c,v)=>`<g transform="translate(${x.toFixed?x.toFixed(2):x} ${y.toFixed?y.toFixed(2):y}) scale(${sz/16})">${I[n](c,v)}</g>`;
+
+function hhmm(h){return [pad(Math.floor(h)%24),pad(Math.floor(h*60)%60)]}
+
+/* ---------- Complicações dos cantos ---------- */
+// Fontes de dados que o usuário pode escolher para cada canto
+const SRC={
+  bat:   {n:'Bateria',              icon:'bat',   v:()=>D.bat+'%',     f:()=>D.bat/100},
+  steps: {n:'Passos',               icon:'steps', v:()=>fmt(D.steps),  f:()=>D.steps/D.goal},
+  bpm:   {n:'Batimentos',           icon:'heart', v:()=>D.bpm+' bpm',  f:()=>(D.bpm-40)/140, col:'#ff6b81'},
+  sleep: {n:'Sono',                 icon:'moon',  v:()=>'7h 12min',    f:()=>7.2/8},
+  energy:{n:'Pontuação de energia', icon:'bolt',  v:()=>D.score+' pts',f:()=>D.score/100, col:'#ffe066'},
+  kcal:  {n:'Calorias',             icon:'flame', v:()=>'486 kcal',    f:()=>486/600, col:'#ffa24c'},
+  dist:  {n:'Distância',            icon:'pin',   v:()=>'5,4 km',      f:()=>.54},
+  hum:   {n:'Umidade',              icon:'drop',  v:()=>'64%',         f:()=>.64, col:'#7cc4ff'},
+  uv:    {n:'Índice UV',            icon:'sun',   v:()=>'UV 3',        f:()=>3/11},
+  none:  {n:'Vazio'}
+};
+// Cantos em ordem: ↖ ↗ ↙ ↘. O ícone fica na ponta do arco perto do horizonte e o progresso cresce a partir dele.
+const QUAD=[
+  {a0:290,a1:340,ia:281,fromEnd:false,bottom:false},
+  {a0:20, a1:70, ia:79, fromEnd:true, bottom:false},
+  {a0:200,a1:250,ia:259,fromEnd:true, bottom:true},
+  {a0:110,a1:160,ia:101,fromEnd:false,bottom:true}];
+let SLOTS=['bat','sleep','bpm','steps'];
+
+// Arco no sentido anti-horário, para o texto dos cantos de baixo ficar de pé
+function arcRev(r,a0,a1){
+  const [x0,y0]=P(r,a0),[x1,y1]=P(r,a1);
+  return `M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 0 0 ${x0.toFixed(2)} ${y0.toFixed(2)}`;
+}
+function quad(i,aod){
+  const src=SRC[SLOTS[i]], q=QUAD[i];
+  if(!src||!src.icon) return '';
+  const fr=Math.max(0,Math.min(1,src.f())), span=q.a1-q.a0, g='#7d828e';
+  const fill=q.fromEnd?arc(228,q.a1-span*fr,q.a1):arc(228,q.a0,q.a0+span*fr);
+  const tp=q.bottom?arcRev(213,q.a0-8,q.a1+8):arc(202,q.a0-8,q.a1+8);
+  const [ix,iy]=P(225,q.ia), c=aod?g:(src.col||'#fff');
+  return `<path id="f3q${i}" d="${tp}" fill="none"/>
+    <path d="${arc(228,q.a0,q.a1)}" fill="none" stroke="rgba(255,255,255,${aod?.12:.25})" stroke-width="9" stroke-linecap="round"/>
+    ${aod?'':`<path d="${fill}" fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round"/>`}
+    ${ic(src.icon,ix,iy,15,c,fr)}
+    <text font-size="15" font-weight="600" fill="${aod?g:'#fff'}"><textPath href="#f3q${i}" startOffset="50%" text-anchor="middle">${src.v()}</textPath></text>`;
+}
+
+/* ---------- 3 · Horizonte ---------- */
+function face3(h,s,aod){
+  const p=pal(h), HZ=262, now=new Date(), [H,M]=hhmm(h);
+  const date=`${DIAS[now.getDay()]} ${now.getDate()} ${MESES[now.getMonth()]}`;
+  const day=!isNight(h);
+  const f=day?(h-SR)/(SS-SR):(((h-SS)+24)%24)/(24-(SS-SR));
+  const bx=240-180*Math.cos(Math.PI*f), by=HZ-185*Math.sin(Math.PI*f);
+  const path=`M60 ${HZ}A180 185 0 0 1 420 ${HZ}`;
+  const quads=[0,1,2,3].map(i=>quad(i,aod)).join('');
+  if(aod){
+    const acc=css(mix(p[2],W,.45)), g='#7d828e';
+    return S(`<defs><clipPath id="f3ca"><rect width="480" height="${HZ}"/></clipPath></defs><rect width="480" height="480" fill="#000"/>
+      <path d="${path}" fill="none" stroke="#2a2d35" stroke-width="2" stroke-dasharray="1 8" stroke-linecap="round"/>
+      <line x1="0" x2="480" y1="${HZ}" y2="${HZ}" stroke="#2a2d35" stroke-width="1.5"/>
+      <g clip-path="url(#f3ca)"><circle cx="${bx}" cy="${by}" r="9" fill="none" stroke="${acc}" stroke-width="2"/></g>
+      <text x="240" y="132" text-anchor="middle" font-size="21" font-weight="600" letter-spacing="2" fill="${g}">${date}</text>
+      <text x="240" y="226" text-anchor="middle" font-size="84" font-weight="600" fill="none" stroke="${acc}" stroke-width="1.6">${H}:${M}</text>
+      <text x="70" y="286" font-size="13" fill="${g}">↑ ${hm(SR)}</text><text x="410" y="286" font-size="13" fill="${g}" text-anchor="end">↓ ${hm(SS)}</text>
+      ${ic(wx(h),206,330,22,g)}<text x="222" y="339" font-size="24" font-weight="500" fill="${g}">${temp(h)}°</text>
+      ${quads}`);
+  }
+  const dark=Math.max(0,Math.min(1,1-lum(p[1])*5));
+  const stars=[[90,120],[140,70],[200,105],[300,60],[350,115],[390,170],[120,190],[260,140],[400,140],[70,220],[180,40],[420,230]]
+    .map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="${i%3?1.2:1.7}" fill="#fff" opacity="${(dark*(i%2?.6:.9)).toFixed(2)}"/>`).join('');
+  const p2l=css(mix(p[2],W,.3));
+  const body=day
+    ?`<circle cx="${bx}" cy="${by}" r="42" fill="url(#f3sun)"/><circle cx="${bx}" cy="${by}" r="13" fill="#fff6d6"/>`
+    :`<circle cx="${bx}" cy="${by}" r="30" fill="url(#f3sun)" opacity=".5"/>${ic('moon',bx,by,26,'#f3f0ff')}`;
+  const fc=[1,2,3,4].map((k,i)=>{const t=Math.floor(h)+k, x=159+i*54;
+    return ic(wx(t),x,355,22,'#fff')+`<text x="${x}" y="386" text-anchor="middle" font-size="17" font-weight="600">${temp(t)}°</text><text x="${x}" y="403" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.6)">${pad(t%24)}h</text>`}).join('');
+  return S(`<defs>
+      <linearGradient id="f3s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${css(p[0])}"/><stop offset=".6" stop-color="${css(p[1])}"/><stop offset="1" stop-color="${css(p[2])}"/></linearGradient>
+      <linearGradient id="f3g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${css(mix(mix(p[2],[40,40,48],.4),K,.65))}"/><stop offset=".6" stop-color="#07080c"/></linearGradient>
+      <linearGradient id="f3h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p2l}" stop-opacity="0"/><stop offset="1" stop-color="${p2l}" stop-opacity=".55"/></linearGradient>
+      <radialGradient id="f3sun"><stop offset="0" stop-color="#fff" stop-opacity=".65"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+      <clipPath id="f3c"><rect width="480" height="${HZ}"/></clipPath>
+      <filter id="f3sh" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="1.5" stdDeviation="3" flood-color="#0a1020" flood-opacity=".3"/></filter>
+    </defs>
+    <rect width="480" height="${HZ}" fill="url(#f3s)"/>${stars}
+    <rect y="${HZ-60}" width="480" height="60" fill="url(#f3h)"/>
+    <path d="${path}" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2" stroke-dasharray="1 8" stroke-linecap="round"/>
+    <g clip-path="url(#f3c)">${body}</g>
+    <rect y="${HZ}" width="480" height="${480-HZ}" fill="url(#f3g)"/>
+    <line x1="0" x2="480" y1="${HZ}" y2="${HZ}" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>
+    <g fill="#fff">
+      <g filter="url(#f3sh)">
+        <text x="240" y="132" text-anchor="middle" font-size="21" font-weight="600" letter-spacing="2" opacity=".92">${date}</text>
+        <text x="240" y="226" text-anchor="middle" font-size="84" font-weight="600" letter-spacing="-1">${H}:${M}<tspan font-size="30" font-weight="300" dx="5" opacity=".9">${pad(s)}</tspan></text>
+      </g>
+      <text x="70" y="286" font-size="13" fill="rgba(255,255,255,.7)">↑ ${hm(SR)}</text>
+      <text x="410" y="286" font-size="13" fill="rgba(255,255,255,.7)" text-anchor="end">↓ ${hm(SS)}</text>
+      ${ic(wx(h),172,311,25,'#fff')}<text x="191" y="322" font-size="30" font-weight="600">${temp(h)}°</text>
+      <text x="245" y="321" font-size="17" fill="rgba(255,255,255,.7)">↑26° ↓12°</text>
+      ${fc}
+      <text x="240" y="434" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.55)">${nextSun(h)}</text>
+      ${quads}
+    </g>`);
+}
+
+</script>
+<script>
+// Cada SVG precisa de ids próprios, senão os gradientes de um vazam para os outros
+const uniq=(svg,k)=>svg.replace(/id="f3/g,`id="${k}`).replace(/(url\(#|href="#)f3/g,`$1${k}`);
+
+const MOMENTS=[
+  [3.5,'Madrugada','Céu escuro e estrelado, lua descendo'],
+  [5.85,'Amanhecer','Lilás e pêssego, sol aparecendo no horizonte'],
+  [8.25,'Manhã','Azul claro com o sol subindo'],
+  [12.5,'Meio-dia','Azul e verde-limão, sol no ponto mais alto'],
+  [15.75,'Tarde','Céu azul com horizonte dourado'],
+  [17.9,'Pôr do sol','Rosa e laranja, sol tocando o horizonte'],
+  [19.2,'Anoitecer','Roxo profundo, lua começando a subir'],
+  [23.3,'Noite','Azul-marinho, estrelas e lua alta']];
+const card=(h,title,desc,aod,k)=>`<div class="card"><div class="mini">${uniq(face3(h,30,aod),k)}</div><b>${hm(h)} · ${title}</b><span>${desc}</span></div>`;
+function renderGallery(){
+  document.getElementById('day').innerHTML=MOMENTS.map(([h,t,d],i)=>card(h,t,d,false,'d'+i)).join('');
+  document.getElementById('aod').innerHTML=[[10,'Manhã','Sol em contorno sobre o arco do dia'],[17.9,'Pôr do sol','Contorno em tom pêssego'],[23.3,'Noite','Contorno lilás, quase invisível no escuro']]
+    .map(([h,t,d],i)=>card(h,t,d,true,'a'+i)).join('');
+}
+
+// Seletores dos cantos; a escolha fica salva só neste navegador
+try{const saved=JSON.parse(localStorage.getItem('horizonte-slots'));if(Array.isArray(saved)&&saved.length===4&&saved.every(k=>SRC[k]))SLOTS=saved}catch(e){}
+document.querySelectorAll('select[data-slot]').forEach(sel=>{
+  const i=+sel.dataset.slot;
+  sel.innerHTML=Object.entries(SRC).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
+  sel.value=SLOTS[i];
+  sel.addEventListener('change',()=>{
+    SLOTS[i]=sel.value;
+    try{localStorage.setItem('horizonte-slots',JSON.stringify(SLOTS))}catch(e){}
+    renderGallery(); tick();
+  });
+});
+renderGallery();
+
+function tick(){
+  const n=new Date(), h=n.getHours()+n.getMinutes()/60+n.getSeconds()/3600, p=pal(h);
+  document.getElementById('big').innerHTML=uniq(face3(h,n.getSeconds(),false),'hb');
+  document.getElementById('hero').style.background=`linear-gradient(160deg,${css(mix(p[0],K,.35))},${css(mix(p[1],K,.45))} 55%,${css(mix(p[2],K,.55))})`;
+  document.getElementById('now').textContent=`Agora: ${hm(Math.floor(h*60)/60)} · ${period(h)}`;
+}
+tick(); setInterval(tick,1000);
+</script>
+</body>
+</html>

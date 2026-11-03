@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="watch_face_name">Horizonte</string>
+    <string name="cfg_accent">Cor de destaque</string>
+    <string name="acc_sky">Azul céu</string>
+    <string name="acc_white">Branco</string>
+    <string name="acc_lime">Lima</string>
+    <string name="acc_orange">Laranja</string>
+    <string name="acc_pink">Rosa</string>
+    <string name="acc_lilac">Lilás</string>
+    <string name="cfg_sky">Fundo</string>
+    <string name="sky_auto">Céu do dia</string>
+    <string name="sky_dark">Escuro</string>
+    <string name="cfg_wxsky">Céu acompanha o clima</string>
+    <string name="cfg_seconds">Segundos</string>
+    <string name="cfg_fc">Previsão</string>
+    <string name="fc_hours">Próximas horas</string>
+    <string name="fc_days">Próximos dias</string>
+    <string name="slot_tl">Canto superior esquerdo</string>
+    <string name="slot_tr">Canto superior direito</string>
+    <string name="slot_bl">Canto inferior esquerdo</string>
+    <string name="slot_br">Canto inferior direito</string>
+    <string name="slot_top">Topo</string>
+    <string name="slot_bottom">Base</string>
+</resources>

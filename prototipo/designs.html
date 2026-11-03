@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Watch Faces – Protótipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0f14;--panel:#161922;--line:#262a35;--text:#e9ecf2;--muted:#8b93a5;--accent:#7cc4ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}
+header{max-width:1200px;margin:0 auto;padding:32px 16px 4px}
+h1{font-family:Outfit,sans-serif;font-weight:600;font-size:28px;margin:0 0 6px}
+header p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+.controls{position:sticky;top:0;z-index:2;background:rgba(13,15,20,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.controls .in{max-width:1200px;margin:0 auto;padding:14px 16px;display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center}
+.clock{font-family:Outfit,sans-serif;font-size:22px;font-weight:500;min-width:62px;font-feature-settings:"tnum"}
+.period{color:var(--muted);font-size:14px;min-width:84px}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:220px;height:10px;border-radius:99px;outline:none;margin:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--bg);box-shadow:0 0 0 1px rgba(255,255,255,.5);cursor:grab}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--bg);cursor:grab}
+button{font:inherit;font-size:14px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
+button[aria-pressed=true]{background:var(--accent);color:#081018;border-color:var(--accent)}
+.grid{max-width:1200px;margin:0 auto;padding:28px 16px 48px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px 20px 24px;display:flex;flex-direction:column;align-items:center}
+.watch{width:min(100%,330px);aspect-ratio:1;border-radius:50%;padding:14px;background:linear-gradient(145deg,#3a3e47,#1b1d22);box-shadow:0 20px 40px rgba(0,0,0,.5),inset 0 1px 1px rgba(255,255,255,.15)}
+.watch svg{width:100%;height:100%;display:block;border-radius:50%;background:#000}
+.card h2{font-family:Outfit,sans-serif;font-weight:600;font-size:22px;margin:22px 0 6px}
+.card p{margin:0;color:var(--muted);font-size:14px;line-height:1.5;text-align:center;max-width:38ch}
+svg text{font-family:Outfit,sans-serif;font-feature-settings:"tnum"}
+</style>
+</head>
+<body>
+<header>
+  <h1>3 propostas · Galaxy Watch 8 (480×480)</h1>
+  <p>Arraste a barra para passar pelo dia, use ▶ para simular 24h em 24s e AOD para ver a tela sempre ligada. Dados de saúde e clima são fictícios.</p>
+</header>
+<div class="controls"><div class="in">
+  <span class="clock" id="clock">--:--</span>
+  <span class="period" id="period"></span>
+  <input type="range" id="slider" min="0" max="1439" step="1" aria-label="Hora do dia">
+  <button id="play" aria-pressed="false">▶ Simular dia</button>
+  <button id="live" aria-pressed="true">Agora</button>
+  <button id="aod" aria-pressed="false">AOD</button>
+</div></div>
+<main class="grid">
+  <section class="card"><div class="watch"></div><h2>1 · Céu</h2>
+    <p>Gradiente que segue a cor do céu. Anel de 24h com o arco do dia (nascer → pôr do sol) e um ponto marcando agora. A mais próxima da referência.</p></section>
+  <section class="card"><div class="watch"></div><h2>2 · Órbita</h2>
+    <p>Fundo escuro com uma aura de cor que muda ao longo do dia. Hora empilhada em destaque e três arcos de progresso: passos, energia e bateria. Gasta menos bateria.</p></section>
+  <section class="card"><div class="watch"></div><h2>3 · Horizonte</h2>
+    <p>Céu em cima, chão escuro embaixo. O sol (ou a lua) percorre o arco real do dia por trás da hora, e os dados ficam em grade no "chão".</p></section>
+</main>
+<script>
+const SR=5+25/60, SS=18+15/60; // nascer / pôr do sol
+const D={steps:7432,goal:10000,bpm:72,bat:68,score:82,sleep:'7h12'};
+const DIAS=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+const DIASF=['DOMINGO','SEGUNDA','TERÇA','QUARTA','QUINTA','SEXTA','SÁBADO'];
+const MESES=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+
+// Paleta do céu: [hora, [topo, meio, base]]
+const KF=[
+ [0,  ['#0b1026','#141b3d','#1d2552']],
+ [4.5,['#0f1433','#24264f','#3b2f63']],
+ [5.6,['#3a3a7a','#c06c9a','#f7a98b']],
+ [7,  ['#5aa9e6','#9fd3f0','#fbd3b0']],
+ [10, ['#2f8fe8','#4fc3f7','#a8e6cf']],
+ [13, ['#29a8e0','#46d0c6','#c6ef6a']],
+ [15.5,['#3f86d6','#8fc7e8','#f5c46a']],
+ [17.9,['#4b3b8f','#e0558a','#ff8a3d']],
+ [19, ['#1e1f5a','#5a2d82','#b04a7a']],
+ [20.5,['#0d1430','#1a2150','#2b2d6b']],
+ [24, ['#0b1026','#141b3d','#1d2552']]];
+const hx=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const KFr=KF.map(([t,c])=>[t,c.map(hx)]);
+function pal(h){
+  h=((h%24)+24)%24; let i=0;
+  while(i<KFr.length-2&&h>=KFr[i+1][0]) i++;
+  const [t0,a]=KFr[i],[t1,b]=KFr[i+1], f=(h-t0)/(t1-t0), s=f*f*(3-2*f);
+  return a.map((c,k)=>c.map((v,j)=>v+(b[k][j]-v)*s));
+}
+const css=c=>`rgb(${c.map(Math.round).join(',')})`;
+const mix=(a,b,f)=>a.map((v,i)=>v+(b[i]-v)*f);
+const lum=c=>{const [r,g,b]=c.map(v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4});return .2126*r+.7152*g+.0722*b};
+const W=[255,255,255], K=[0,0,0];
+
+const pad=n=>String(n).padStart(2,'0');
+const fmt=n=>n.toLocaleString('pt-BR');
+const hm=t=>{const m=Math.round(t*60);return pad(Math.floor(m/60)%24)+':'+pad(m%60)};
+const temp=h=>Math.round(19+7*Math.sin((h-9)/12*Math.PI));
+const isNight=h=>{h=((h%24)+24)%24;return h<SR||h>=SS};
+const wx=h=>{const t=((h%24)+24)%24;return isNight(t)?'moon':(t>=14&&t<17?'cloudSun':'sun')};
+const dur=x=>{const m=Math.round(x*60);return Math.floor(m/60)+'h'+pad(m%60)};
+const nextSun=h=>h<SR?'nascer do sol em '+dur(SR-h):h<SS?'pôr do sol em '+dur(SS-h):'nascer do sol em '+dur(24-h+SR);
+function period(h){
+  if(h<SR-.5) return 'Madrugada'; if(h<SR+1) return 'Amanhecer'; if(h<11) return 'Manhã';
+  if(h<15) return 'Meio-dia'; if(h<SS-1) return 'Tarde'; if(h<SS+.8) return 'Pôr do sol';
+  if(h<21) return 'Anoitecer'; return 'Noite';
+}
+
+// Geometria: ângulos em graus, 0 = topo, sentido horário
+const rad=d=>(d-90)*Math.PI/180;
+const P=(r,d,cx=240,cy=240)=>[cx+r*Math.cos(rad(d)),cy+r*Math.sin(rad(d))];
+function arc(r,a0,a1,cx=240,cy=240){
+  if(a1-a0>=360) a1=a0+359.9;
+  const [x0,y0]=P(r,a0,cx,cy),[x1,y1]=P(r,a1,cx,cy);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+const S=b=>`<svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">${b}</svg>`;
+
+// Ícones desenhados numa caixa de 16 unidades centrada em 0
+const I={
+  sun:c=>`<circle r="3.4" fill="${c}"/>`+[0,1,2,3,4,5,6,7].map(i=>{const a=i*Math.PI/4;
+    return `<line x1="${(5.2*Math.cos(a)).toFixed(2)}" y1="${(5.2*Math.sin(a)).toFixed(2)}" x2="${(7.3*Math.cos(a)).toFixed(2)}" y2="${(7.3*Math.sin(a)).toFixed(2)}" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>`}).join(''),
+  moon:c=>`<path d="M1 -6.5A6.5 6.5 0 1 0 1 6.5A3 6.5 0 0 1 1 -6.5Z" fill="${c}"/>`,
+  cloud:c=>`<g fill="${c}"><circle cx="-2.5" cy="0.6" r="3.2"/><circle cx="1.4" cy="-1.4" r="4"/><circle cx="4.6" cy="1.6" r="2.6"/><rect x="-5.7" y="0.6" width="11" height="3.6" rx="1.8"/></g>`,
+  cloudSun:c=>`<g transform="translate(-2.6 -2.6) scale(.72)">${I.sun(c)}</g><g transform="translate(1.6 2) scale(.82)">${I.cloud(c)}</g>`,
+  heart:c=>`<path d="M0 6C-7 1-7.5-5.5-3.5-6.2C-1.6-6.5 0-5 0-3.6C0-5 1.6-6.5 3.5-6.2C7.5-5.5 7 1 0 6Z" fill="${c}"/>`,
+  steps:c=>`<g fill="${c}"><ellipse cx="-2.8" cy="-2" rx="2.3" ry="3.7"/><ellipse cx="2.8" cy="1.6" rx="2.3" ry="3.7"/></g>`,
+  bat:(c,v=1)=>`<rect x="-7" y="-4" width="12.5" height="8" rx="2" fill="none" stroke="${c}" stroke-width="1.4"/><rect x="-5.4" y="-2.4" width="${(9.3*v).toFixed(2)}" height="4.8" rx="1" fill="${c}"/><rect x="6.3" y="-1.8" width="1.6" height="3.6" rx=".8" fill="${c}"/>`
+};
+const ic=(n,x,y,sz,c,v)=>`<g transform="translate(${x.toFixed?x.toFixed(2):x} ${y.toFixed?y.toFixed(2):y}) scale(${sz/16})">${I[n](c,v)}</g>`;
+
+function hhmm(h){return [pad(Math.floor(h)%24),pad(Math.floor(h*60)%60)]}
+
+/* ---------- 1 · Céu ---------- */
+function face1(h,s,aod){
+  const p=pal(h), ang=t=>(t*15+180)%360, a0=ang(SR), a1=ang(SS)+360;
+  const [dx,dy]=P(222,ang(h)), now=new Date(), date=DIAS[now.getDay()]+' '+now.getDate();
+  const [H,M]=hhmm(h);
+  if(aod){
+    const acc=css(mix(p[2],W,.45)), g='#8a8f9c';
+    return S(`<rect width="480" height="480" fill="#000"/>
+      <path d="${arc(222,0,360)}" fill="none" stroke="#1c1e24" stroke-width="4"/>
+      <path d="${arc(222,a0,a1)}" fill="none" stroke="#34373f" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="${dx}" cy="${dy}" r="6" fill="${acc}"/>
+      <text x="240" y="192" text-anchor="middle" font-size="24" font-weight="500" fill="${g}">${date}</text>
+      <text x="240" y="270" text-anchor="middle" font-size="92" font-weight="400" fill="none" stroke="${acc}" stroke-width="1.6">${H}:${M}</text>
+      ${ic('heart',222,306,14,g)}<text x="234" y="311" font-size="16" fill="${g}">${D.bpm}</text>`);
+  }
+  const sc=Math.max(0,Math.min(.32,(lum(p[1])-.25)*.7));
+  const comp=(x,y,r,f)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="rgba(255,255,255,.16)"/>
+    <path d="${arc(r-5,0,360,x,y)}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="4"/>
+    <path d="${arc(r-5,0,360*f,x,y)}" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>`;
+  const fc=[1,2,3,4].map((k,i)=>{const t=Math.floor(h)+k, x=150+i*60;
+    return ic(wx(t),x,344,22,'#fff')+`<text x="${x}" y="380" text-anchor="middle" font-size="16" font-weight="600">${temp(t)}°</text><text x="${x}" y="399" text-anchor="middle" font-size="12" opacity=".8">${pad(t%24)}h</text>`}).join('');
+  const [sx,sy]=P(194,a0),[ex,ey]=P(194,ang(SS));
+  return S(`<defs>
+      <linearGradient id="f1bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${css(p[0])}"/><stop offset=".55" stop-color="${css(p[1])}"/><stop offset="1" stop-color="${css(p[2])}"/></linearGradient>
+      <radialGradient id="f1sc" cx=".5" cy=".52" r=".42"><stop offset="0" stop-color="#06121f" stop-opacity="${sc}"/><stop offset="1" stop-color="#06121f" stop-opacity="0"/></radialGradient>
+      <filter id="f1sh" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="1.5" stdDeviation="3" flood-color="#0a1626" flood-opacity=".3"/></filter>
+    </defs>
+    <rect width="480" height="480" fill="url(#f1bg)"/><rect width="480" height="480" fill="url(#f1sc)"/>
+    <path d="${arc(222,0,360)}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="8"/>
+    <path d="${arc(222,a0,a1)}" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="${dx}" cy="${dy}" r="15" fill="#fff" opacity=".3"/><circle cx="${dx}" cy="${dy}" r="8" fill="#fff"/>
+    <g fill="#fff" filter="url(#f1sh)">
+      <text x="${sx}" y="${sy+4}" font-size="12" opacity=".85">${hm(SR)}</text>
+      <text x="${ex}" y="${ey+4}" font-size="12" opacity=".85" text-anchor="end">${hm(SS)}</text>
+      ${comp(158,130,34,D.bat/100)}${ic('bat',158,121,16,'#fff',D.bat/100)}<text x="158" y="148" text-anchor="middle" font-size="14" font-weight="600">${D.bat}%</text>
+      ${comp(240,104,40,D.score/100)}<text x="240" y="108" text-anchor="middle" font-size="28" font-weight="600">${D.score}</text><text x="240" y="122" text-anchor="middle" font-size="9" letter-spacing="1.2" opacity=".85">ENERGIA</text>
+      ${comp(322,130,34,D.steps/D.goal)}${ic('steps',322,120,14,'#fff')}<text x="322" y="148" text-anchor="middle" font-size="14" font-weight="600">${(D.steps/1000).toFixed(1).replace('.',',')}k</text>
+      <text x="240" y="192" text-anchor="middle" font-size="24" font-weight="600" letter-spacing="1">${date}</text>
+      <text x="240" y="270" text-anchor="middle" font-size="92" font-weight="400" letter-spacing="-1">${H}:${M}<tspan font-size="36" font-weight="300" dx="6" opacity=".9">${pad(s)}</tspan></text>
+      ${ic(wx(h),156,305,18,'#fff')}<text x="172" y="311" font-size="17" font-weight="500">Agora ${temp(h)}°<tspan opacity=".75" font-weight="400"> · ↑26° ↓12°</tspan></text>
+      ${fc}
+      ${ic('heart',196,433,14,'#fff')}<text x="207" y="438" font-size="14" font-weight="500">${D.bpm}</text>
+      ${ic('moon',262,433,13,'#fff')}<text x="273" y="438" font-size="14" font-weight="500">${D.sleep}</text>
+    </g>`);
+}
+
+/* ---------- 2 · Órbita ---------- */
+function face2(h,s,aod){
+  const p=pal(h), now=new Date(), [H,M]=hhmm(h);
+  const date=`${DIASF[now.getDay()]} · ${now.getDate()} ${MESES[now.getMonth()]}`;
+  const glow=Math.max(0,.18-lum(p[1])*.6); // clareia a aura à noite para ela não sumir
+  const au=p.map(c=>mix(c,[120,130,255],glow));
+  const c1='#fff', c2=css(mix(p[1],W,.35)), c3=css(mix(p[2],W,.35));
+  const A0=38, A1=142;
+  const rings=[[226,D.steps/D.goal,c1],[212,D.score/100,c2],[198,D.bat/100,c3]];
+  const ringSvg=dim=>rings.map(([r,f,c])=>`<path d="${arc(r,A0,A1)}" fill="none" stroke="rgba(255,255,255,${dim?.06:.1})" stroke-width="8" stroke-linecap="round"/><path d="${arc(r,A0,A0+(A1-A0)*f)}" fill="none" stroke="${c}" stroke-opacity="${dim?.4:1}" stroke-width="8" stroke-linecap="round"/>`).join('');
+  if(aod){
+    const g='#7d828e';
+    return S(`<rect width="480" height="480" fill="#000"/>${ringSvg(true)}
+      <text x="240" y="88" text-anchor="middle" font-size="14" font-weight="600" letter-spacing="3" fill="${g}">${date}</text>
+      <text x="64" y="236" font-size="150" font-weight="600" letter-spacing="-4" fill="none" stroke="#fff" stroke-width="1.5">${H}</text>
+      <text x="64" y="376" font-size="150" font-weight="300" letter-spacing="-4" fill="none" stroke="${c3}" stroke-width="1.5">${M}</text>`);
+  }
+  const row=(y,c,label,val)=>`<circle cx="302" cy="${y-4}" r="3.5" fill="${c}"/><text x="312" y="${y}" font-size="11" font-weight="600" letter-spacing="1.5" fill="rgba(255,255,255,.6)">${label}</text><text x="298" y="${y+28}" font-size="26" font-weight="500" fill="#fff">${val}</text>`;
+  return S(`<defs>
+      <radialGradient id="f2a" cx=".5" cy="1.08" r=".78"><stop offset="0" stop-color="${css(au[2])}" stop-opacity=".95"/><stop offset=".5" stop-color="${css(au[1])}" stop-opacity=".45"/><stop offset="1" stop-color="${css(au[1])}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="f2b" cx=".9" cy=".05" r=".6"><stop offset="0" stop-color="${css(au[0])}" stop-opacity=".75"/><stop offset="1" stop-color="${css(au[0])}" stop-opacity="0"/></radialGradient>
+      <filter id="f2sh" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity=".35"/></filter>
+    </defs>
+    <rect width="480" height="480" fill="#05070b"/><rect width="480" height="480" fill="url(#f2a)"/><rect width="480" height="480" fill="url(#f2b)"/>
+    ${ringSvg(false)}
+    <text x="240" y="88" text-anchor="middle" font-size="14" font-weight="600" letter-spacing="3" fill="rgba(255,255,255,.75)">${date}</text>
+    <g filter="url(#f2sh)" fill="#fff">
+      <text x="64" y="236" font-size="150" font-weight="600" letter-spacing="-4">${H}</text>
+      <text x="64" y="376" font-size="150" font-weight="300" letter-spacing="-4">${M}</text>
+      <text x="246" y="376" font-size="30" font-weight="400" fill="${c3}">${pad(s)}</text>
+      ${row(178,c1,'PASSOS',fmt(D.steps))}${row(244,c2,'ENERGIA',D.score)}${row(310,c3,'BATERIA',D.bat+'%')}
+      ${ic('heart',192,420,15,'#ff6b81')}<text x="204" y="425" font-size="17" font-weight="500">${D.bpm}</text>
+      ${ic(wx(h),258,419,17,'#fff')}<text x="271" y="425" font-size="17" font-weight="500">${temp(h)}°</text>
+      <text x="240" y="452" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.6)">${nextSun(h)}</text>
+    </g>`);
+}
+
+/* ---------- 3 · Horizonte ---------- */
+function face3(h,s,aod){
+  const p=pal(h), HZ=262, now=new Date(), [H,M]=hhmm(h);
+  const date=`${DIAS[now.getDay()]} ${now.getDate()} ${MESES[now.getMonth()]}`;
+  const day=!isNight(h);
+  const f=day?(h-SR)/(SS-SR):(((h-SS)+24)%24)/(24-(SS-SR));
+  const bx=240-180*Math.cos(Math.PI*f), by=HZ-185*Math.sin(Math.PI*f);
+  const path=`M60 ${HZ}A180 185 0 0 1 420 ${HZ}`;
+  if(aod){
+    const acc=css(mix(p[2],W,.45)), g='#7d828e';
+    return S(`<defs><clipPath id="f3ca"><rect width="480" height="${HZ}"/></clipPath></defs><rect width="480" height="480" fill="#000"/>
+      <path d="${path}" fill="none" stroke="#2a2d35" stroke-width="2" stroke-dasharray="1 8" stroke-linecap="round"/>
+      <line x1="0" x2="480" y1="${HZ}" y2="${HZ}" stroke="#2a2d35" stroke-width="1.5"/>
+      <g clip-path="url(#f3ca)"><circle cx="${bx}" cy="${by}" r="9" fill="none" stroke="${acc}" stroke-width="2"/></g>
+      <text x="240" y="130" text-anchor="middle" font-size="17" font-weight="600" letter-spacing="2" fill="${g}">${date}</text>
+      <text x="240" y="226" text-anchor="middle" font-size="84" font-weight="600" fill="none" stroke="${acc}" stroke-width="1.6">${H}:${M}</text>
+      <text x="64" y="286" font-size="13" fill="${g}">↑ ${hm(SR)}</text><text x="416" y="286" font-size="13" fill="${g}" text-anchor="end">↓ ${hm(SS)}</text>
+      ${ic('steps',158,343,15,g)}<text x="170" y="349" font-size="17" font-weight="500" fill="${g}">${fmt(D.steps)}</text>
+      ${ic('heart',252,343,14,g)}<text x="263" y="349" font-size="17" font-weight="500" fill="${g}">${D.bpm}</text>
+      ${ic('bat',309,343,15,g,D.bat/100)}<text x="321" y="349" font-size="17" font-weight="500" fill="${g}">${D.bat}%</text>`);
+  }
+  const dark=Math.max(0,Math.min(1,1-lum(p[1])*5));
+  const stars=[[90,120],[140,70],[200,105],[300,60],[350,115],[390,170],[120,190],[260,140],[400,140],[70,220],[180,40],[420,230]]
+    .map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="${i%3?1.2:1.7}" fill="#fff" opacity="${(dark*(i%2?.6:.9)).toFixed(2)}"/>`).join('');
+  const p2l=css(mix(p[2],W,.3));
+  const body=day
+    ?`<circle cx="${bx}" cy="${by}" r="42" fill="url(#f3sun)"/><circle cx="${bx}" cy="${by}" r="13" fill="#fff6d6"/>`
+    :`<circle cx="${bx}" cy="${by}" r="30" fill="url(#f3sun)" opacity=".5"/>${ic('moon',bx,by,26,'#f3f0ff')}`;
+  const cell=(x,y,icn,val,lab,v,col='#fff')=>ic(icn,x-44,y-9,18,col,v)+`<text x="${x-30}" y="${y}" font-size="24" font-weight="600">${val}</text><text x="${x-30}" y="${y+17}" font-size="10" font-weight="600" letter-spacing="1.4" fill="rgba(255,255,255,.5)">${lab}</text>`;
+  const fc=[1,2,3].map(k=>{const t=Math.floor(h)+k;return `${pad(t%24)}h ${temp(t)}°`}).join(' · ');
+  return S(`<defs>
+      <linearGradient id="f3s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${css(p[0])}"/><stop offset=".6" stop-color="${css(p[1])}"/><stop offset="1" stop-color="${css(p[2])}"/></linearGradient>
+      <linearGradient id="f3g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${css(mix(mix(p[2],[40,40,48],.4),K,.65))}"/><stop offset=".6" stop-color="#07080c"/></linearGradient>
+      <linearGradient id="f3h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p2l}" stop-opacity="0"/><stop offset="1" stop-color="${p2l}" stop-opacity=".55"/></linearGradient>
+      <radialGradient id="f3sun"><stop offset="0" stop-color="#fff" stop-opacity=".65"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+      <clipPath id="f3c"><rect width="480" height="${HZ}"/></clipPath>
+      <filter id="f3sh" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="1.5" stdDeviation="3" flood-color="#0a1020" flood-opacity=".3"/></filter>
+    </defs>
+    <rect width="480" height="${HZ}" fill="url(#f3s)"/>${stars}
+    <rect y="${HZ-60}" width="480" height="60" fill="url(#f3h)"/>
+    <path d="${path}" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2" stroke-dasharray="1 8" stroke-linecap="round"/>
+    <g clip-path="url(#f3c)">${body}</g>
+    <rect y="${HZ}" width="480" height="${480-HZ}" fill="url(#f3g)"/>
+    <line x1="0" x2="480" y1="${HZ}" y2="${HZ}" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>
+    <g fill="#fff">
+      <g filter="url(#f3sh)">
+        <text x="240" y="130" text-anchor="middle" font-size="17" font-weight="600" letter-spacing="2" opacity=".92">${date}</text>
+        <text x="240" y="226" text-anchor="middle" font-size="84" font-weight="600" letter-spacing="-1">${H}:${M}<tspan font-size="30" font-weight="300" dx="5" opacity=".9">${pad(s)}</tspan></text>
+      </g>
+      <text x="64" y="286" font-size="13" fill="rgba(255,255,255,.7)">↑ ${hm(SR)}</text>
+      <text x="416" y="286" font-size="13" fill="rgba(255,255,255,.7)" text-anchor="end">↓ ${hm(SS)}</text>
+      ${cell(180,334,'steps',fmt(D.steps),'PASSOS')}${cell(320,334,'heart',D.bpm,'BPM',0,'#ff6b81')}
+      ${cell(180,392,wx(h),temp(h)+'°','26° / 12°')}${cell(320,392,'bat',D.bat+'%','BATERIA',D.bat/100)}
+      <text x="240" y="446" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.55)">${fc}</text>
+    </g>`);
+}
+
+</script>
+<script>
+/* ---------- controles ---------- */
+const faces=[face1,face2,face3], els=[...document.querySelectorAll('.watch')];
+const slider=document.getElementById('slider'), bPlay=document.getElementById('play'), bLive=document.getElementById('live'), bAod=document.getElementById('aod');
+slider.style.background=`linear-gradient(90deg,${Array.from({length:25},(_,i)=>`${css(pal(i)[1])} ${(i/24*100).toFixed(1)}%`).join(',')})`;
+let mins=0, live=true, playing=false, aod=false, last='', lastTs=0;
+function setState(){bPlay.setAttribute('aria-pressed',playing);bLive.setAttribute('aria-pressed',live);bAod.setAttribute('aria-pressed',aod);bPlay.textContent=playing?'❚❚ Pausar':'▶ Simular dia'}
+slider.addEventListener('input',()=>{mins=+slider.value;live=false;playing=false;setState()});
+bPlay.onclick=()=>{playing=!playing;if(playing)live=false;setState()};
+bLive.onclick=()=>{live=true;playing=false;setState()};
+bAod.onclick=()=>{aod=!aod;setState()};
+function frame(ts){
+  const now=new Date();
+  if(playing) mins=(mins+(ts-lastTs)*1440/24000)%1440;
+  else if(live) mins=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
+  lastTs=ts;
+  const s=now.getSeconds(), h=mins/60, key=(playing?mins.toFixed(1):Math.floor(mins*4))+'|'+s+'|'+aod;
+  if(key!==last){
+    last=key;
+    els.forEach((el,i)=>el.innerHTML=faces[i](h,s,aod));
+    if(document.activeElement!==slider) slider.value=Math.floor(mins);
+    document.getElementById('clock').textContent=hm(Math.floor(mins)/60);
+    document.getElementById('period').textContent=period(h);
+  }
+  requestAnimationFrame(frame);
+}
+setState(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>
