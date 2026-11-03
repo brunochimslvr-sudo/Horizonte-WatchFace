@@ -16,10 +16,8 @@
     <string name="cfg_fc">Previsão</string>
     <string name="fc_hours">Próximas horas</string>
     <string name="fc_days">Próximos dias</string>
-    <string name="slot_tl">Canto superior esquerdo</string>
-    <string name="slot_tr">Canto superior direito</string>
-    <string name="slot_bl">Canto inferior esquerdo</string>
-    <string name="slot_br">Canto inferior direito</string>
+    <string name="slot_left">Topo esquerdo</string>
+    <string name="slot_right">Topo direito</string>
     <string name="slot_top">Topo</string>
     <string name="slot_bottom">Base</string>
 </resources>

@@ -51,5 +51,6 @@ Mande o erro que aparecer que eu ajusto o `gen.py`.
 
 - Cores do céu mudando com a hora (usam `extractColorFromColors` com 25 cores por faixa).
 - Texto curvo nos cantos (`TextCircular`).
-- Complicações padrão dos cantos (bateria, nascer/pôr do sol, batimentos, passos).
+- Barra de bateria no horizonte (`BATTERY_PERCENT`, cor por nível e raio ao carregar com `BATTERY_CHARGING_STATUS`) e largura da barra via `Transform` no `Rectangle`.
+- Complicações padrão do topo e da base (passos, batimentos, notificações, próximo evento).
 - Nascer e pôr do sol do arco estão fixos em 05:30 e 18:15 (`SUNRISE` e `SUNSET` no `gen.py`), porque o formato não tem essa fonte de dados.

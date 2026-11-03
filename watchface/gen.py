@@ -39,8 +39,7 @@ STRINGS = {
     'cfg_wxsky': 'Céu acompanha o clima',
     'cfg_seconds': 'Segundos',
     'cfg_fc': 'Previsão', 'fc_hours': 'Próximas horas', 'fc_days': 'Próximos dias',
-    'slot_tl': 'Canto superior esquerdo', 'slot_tr': 'Canto superior direito',
-    'slot_bl': 'Canto inferior esquerdo', 'slot_br': 'Canto inferior direito',
+    'slot_left': 'Topo esquerdo', 'slot_right': 'Topo direito',
     'slot_top': 'Topo', 'slot_bottom': 'Base',
 }
 
@@ -136,29 +135,23 @@ def text(x, y, w, h, size, template, params=(), align='CENTER', weight='NORMAL',
 
 
 # --- Complicações (em coordenadas 480x480) ---------------------------------
-R_ARC = 227.0
-THICK = 7.0          # faixa fina e elegante
-R_ICON = 225.0       # alinhado à ponta do arco, sem bolinha escura
-ICON = 21            # ícone proporcional à espessura da faixa
-QUADS = [   # a0, a1, ângulo do ícone (ponta perto do horizonte), progresso cresce a partir do fim, parte de baixo
-    (290, 340, 280, False, False),
-    (20, 70, 80, True, False),
-    (200, 250, 260, True, True),
-    (110, 160, 100, False, True),
-]
-R_TXT_TOP, R_TXT_BOT = 199.0, 211.0     # linha de base do texto curvo, acompanhando o arco com folga limpa
-SLOT_NAMES = ['slot_tl', 'slot_tr', 'slot_bl', 'slot_br']
-DEFAULTS = [
-    ('WATCH_BATTERY', 'RANGED_VALUE'),
-    ('HEART_RATE', 'SHORT_TEXT'),
-    ('SUNRISE_SUNSET', 'SHORT_TEXT'),
-    ('STEP_COUNT', 'GOAL_PROGRESS'),
+# (id, nome/string, x, y, w, h, provedor padrão, tipo padrão, sombra no texto)
+SLOTS = [
+    (0, 'slot_left', 106, 40, 84, 52, 'STEP_COUNT', 'SHORT_TEXT', True),
+    (1, 'slot_right', 290, 40, 84, 52, 'HEART_RATE', 'SHORT_TEXT', True),
+    (2, 'slot_top', 195, 11, 90, 52, 'UNREAD_NOTIFICATION_COUNT', 'SHORT_TEXT', True),
+    (3, 'slot_bottom', 170, 414, 140, 54, 'NEXT_EVENT', 'SHORT_TEXT', False),
 ]
 SUPPORTED = 'RANGED_VALUE GOAL_PROGRESS SHORT_TEXT EMPTY'
-RANGED = ('(clamp([COMPLICATION.RANGED_VALUE_VALUE], [COMPLICATION.RANGED_VALUE_MIN], [COMPLICATION.RANGED_VALUE_MAX])'
-          ' - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN])')
-GOAL = ('clamp([COMPLICATION.GOAL_PROGRESS_VALUE], 0, [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE])'
-        ' / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE]')
+
+# --- Bateria: barra no horizonte (cor por nível) ---------------------------
+BAT = 'clamp([BATTERY_PERCENT], 0, 100)'
+BAR_X, BAR_W = 24, 432
+BAT_LEVELS = [          # cor, condição de visibilidade
+    ('#FF7FE3A0', f'{BAT} > 35'),
+    ('#FFFFC24C', f'{BAT} > 15 && {BAT} <= 35'),
+    ('#FFFF6B5B', f'{BAT} <= 15'),
+]
 
 
 def comp_icon(cx, cy, size, alpha=215):
@@ -168,65 +161,6 @@ def comp_icon(cx, cy, size, alpha=215):
             f'<PartImage x="{n(cx - size / 2)}" y="{n(cy - size / 2)}" width="{size}" height="{size}" alpha="{alpha}" '
             'tintColor="#FFFFFFFF"><ImageFilters><HsbFilter saturate="0" brightness="1"/></ImageFilters>'
             '<Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage></Group></Compare></Condition>')
-
-
-def quad_box(a0, a1, ia):
-    """Caixa (x, y, w, h) que envolve arco, ícone e texto do canto."""
-    pts = []
-    for a in range(min(a0, ia) - 8, max(a1, ia) + 9, 2):
-        r = math.radians(a)
-        for rad_ in (R_TXT_TOP - 24, R_ARC + THICK / 2 + 6):
-            pts.append((CX + rad_ * math.sin(r), CX - rad_ * math.cos(r)))
-    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
-    x0, y0 = max(0, min(xs)), max(0, min(ys))
-    return x0, y0, min(W_FACE, max(xs)) - x0, min(W_FACE, max(ys)) - y0
-
-
-def corner_xml(i):
-    a0, a1, ia, from_end, bottom = QUADS[i]
-    bx, by, bw, bh = quad_box(a0, a1, ia)
-    ccx, ccy = CX - bx, CX - by      # centro do relógio em coordenadas do slot
-    span = a1 - a0
-    arc_attr = f'centerX="{n(ccx)}" centerY="{n(ccy)}" width="{n(2 * R_ARC)}" height="{n(2 * R_ARC)}" startAngle="{a0}" endAngle="{a1}"'
-    track_col = '#22FFFFFF' if bottom else '#2EFFFFFF'
-
-    def arcs(frac_expr):
-        target, value = (('startAngle', f'{a1} - {span} * ({frac_expr})') if from_end
-                         else ('endAngle', f'{a0} + {span} * ({frac_expr})'))
-        fill = '' if frac_expr is None else (
-            f'<PartDraw x="0" y="0" width="{n(bw)}" height="{n(bh)}"><Arc {arc_attr}>'
-            f'<Stroke thickness="{n(THICK)}" color="{ACCENT}" cap="ROUND"/>'
-            f'<Transform target="{target}" value="{esc(value)}"/></Arc></PartDraw>')
-        return (f'<Group x="0" y="0" width="{n(bw)}" height="{n(bh)}" name="arco{i}"><Variant mode="AMBIENT" target="alpha" value="0"/>'
-                f'<PartDraw x="0" y="0" width="{n(bw)}" height="{n(bh)}"><Arc {arc_attr}>'
-                f'<Stroke thickness="{n(THICK)}" color="{track_col}" cap="ROUND"/></Arc></PartDraw>{fill}</Group>')
-
-    # texto curvo acompanhando o arco, sempre "de pé", mais leve e com janela angular mais ampla
-    if bottom:
-        t0, t1, direction, r_txt = a1 + 8, a0 - 8, 'COUNTER_CLOCKWISE', R_TXT_BOT
-    else:
-        t0, t1, direction, r_txt = a0 - 8, a1 + 8, 'CLOCKWISE', R_TXT_TOP
-
-    inner = '<Template>%s<Parameter expression="[COMPLICATION.TEXT]"/></Template>'
-    if not bottom:
-        inner = f'<Shadow color="{SOFT_SHADOW}" offsetX="0" offsetY="1" radius="3">{inner}</Shadow>'
-    label = (f'<PartText x="0" y="0" width="{n(bw)}" height="{n(bh)}"><TextCircular centerX="{n(ccx)}" centerY="{n(ccy)}" '
-             f'width="{n(2 * r_txt)}" height="{n(2 * r_txt)}" startAngle="{t0 % 360}" endAngle="{t1 % 360}" direction="{direction}" '
-             f'align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="16" weight="MEDIUM" letterSpacing="0.02" '
-             f'color="#D9FFFFFF">{inner}</Font></TextCircular></PartText>')
-
-    r = math.radians(ia)
-    icon = comp_icon(CX + R_ICON * math.sin(r) - bx, CX - R_ICON * math.cos(r) - by, ICON, alpha=210)
-
-    body = (f'<Complication type="RANGED_VALUE">{arcs(RANGED)}{icon}{label}</Complication>'
-            f'<Complication type="GOAL_PROGRESS">{arcs(GOAL)}{icon}{label}</Complication>'
-            f'<Complication type="SHORT_TEXT">{arcs(None)}{icon}{label}</Complication>'
-            f'<Complication type="EMPTY">{arcs(None)}</Complication>')
-    prov, typ = DEFAULTS[i]
-    return (f'<ComplicationSlot slotId="{i}" name="canto{i}" displayName="{SLOT_NAMES[i]}" x="{n(bx)}" y="{n(by)}" '
-            f'width="{n(bw)}" height="{n(bh)}" supportedTypes="{SUPPORTED}">'
-            f'<DefaultProviderPolicy defaultSystemProvider="{prov}" defaultSystemProviderType="{typ}"/>'
-            f'<BoundingBox x="0" y="0" width="{n(bw)}" height="{n(bh)}"/>{body}</ComplicationSlot>')
 
 
 def center_slot_xml(slot_id, name, x, y, w, h, prov, typ, top=False):
@@ -404,6 +338,14 @@ def draw_icon(name, size=96):
     return c.finish()
 
 
+def draw_bolt(w=48, h=64, scale=4):
+    """Raio branco que aparece ao lado da bateria quando o relógio está carregando."""
+    im = Image.new('RGBA', (w * scale, h * scale), (0, 0, 0, 0))
+    pts = [(0.62, 0.0), (0.12, 0.58), (0.46, 0.58), (0.34, 1.0), (0.92, 0.38), (0.56, 0.38)]
+    ImageDraw.Draw(im).polygon([(x * w * scale, y * h * scale) for x, y in pts], fill=(255, 255, 255, 255))
+    return im.resize((w, h), Image.LANCZOS)
+
+
 def draw_sky_sun(size=136):
     """Sol com halo em degradê radial contínuo (sem anéis visíveis) e leve dithering."""
     im = Image.new('RGBA', (size, size), (0, 0, 0, 0))
@@ -521,12 +463,6 @@ def weather_icon(prefix, x, y, size, name, color='#FFFFFFFF'):
                 f'<Template>%s<Parameter expression="{idx}"/></Template></BitmapFont></Text></PartText>')
     return (f'<Condition><Expressions><Expression name="{name}">[WEATHER.{prefix}IS_DAY]</Expression></Expressions>'
             f'<Compare expression="{name}">{part("wx_day")}</Compare><Default>{part("wx_night")}</Default></Condition>')
-
-
-def day_icon(k, x, y, size, color='#E6FFFFFF'):
-    idx = f'[WEATHER.DAYS.{k}.CONDITION_DAY] &lt;= 15 ? [WEATHER.DAYS.{k}.CONDITION_DAY] : 0'
-    return (f'<PartText x="{n(x)}" y="{n(y)}" width="{size}" height="{size}"><Text><BitmapFont family="wx_day" size="{size}" color="{color}">'
-            f'<Template>%s<Parameter expression="{idx}"/></Template></BitmapFont></Text></PartText>')
 
 
 def sky_layers():
@@ -647,52 +583,69 @@ def build_watchface():
       f'<Fill color="#FF000000"><LinearGradient startX="0" startY="0" endX="{W_FACE}" endY="0" '
       'colors="#14FFFFFF #78FFFFFF #14FFFFFF" positions="0.08 0.5 0.92"/></Fill></Rectangle></PartDraw>')
 
+    # ---- bateria: a própria linha do horizonte vira a barra de carga (cor muda com o nível)
+    A(f'<Group x="0" y="0" width="{W_FACE}" height="{W_FACE}" name="bateria">')
+    A(f'<PartDraw x="{BAR_X}" y="{round(HZ) + 1}" width="{BAR_W}" height="2"><Rectangle x="0" y="0" width="{BAR_W}" height="2">'
+      '<Fill color="#33FFFFFF"/></Rectangle></PartDraw>')
+    for col, cond in BAT_LEVELS:
+        A(f'<PartDraw x="{BAR_X}" y="{round(HZ) - 1}" width="{BAR_W}" height="4"><Transform target="alpha" value="{esc(f"({cond}) ? 255 : 0")}"/>'
+          f'<Rectangle x="0" y="0" width="{BAR_W}" height="4"><Transform target="width" value="{esc(f"clamp({BAR_W} * {BAT} / 100, 4, {BAR_W})")}"/>'
+          f'<Fill color="{col}"/></Rectangle></PartDraw>')
+    A(f'<PartDraw x="0" y="{round(HZ) - 4}" width="10" height="10"><Transform target="x" value="{esc(f"{BAR_X} + {BAR_W} * {BAT} / 100 - 5")}"/>'
+      '<Ellipse x="0" y="0" width="10" height="10"><Fill color="#FFFFFFFF"/></Ellipse></PartDraw>')
+
+    # ícone de bateria + porcentagem logo abaixo da linha; raio aparece só carregando
+    A(f'<PartImage x="188" y="272" width="12" height="16"><Transform target="alpha" value="{esc("[BATTERY_CHARGING_STATUS] ? 255 : 0")}"/>'
+      '<Image resource="bat_bolt"/></PartImage>')
+    A('<PartDraw x="206" y="275" width="26" height="12"><Rectangle x="0" y="0" width="22" height="12">'
+      '<Stroke thickness="1.5" color="#E6FFFFFF"/></Rectangle></PartDraw>')
+    A('<PartDraw x="229" y="278" width="2" height="6"><Rectangle x="0" y="0" width="2" height="6"><Fill color="#E6FFFFFF"/></Rectangle></PartDraw>')
+    for col, cond in BAT_LEVELS:
+        A(f'<PartDraw x="208" y="277" width="18" height="8"><Transform target="alpha" value="{esc(f"({cond}) ? 255 : 0")}"/>'
+          f'<Rectangle x="0" y="0" width="18" height="8"><Transform target="width" value="{esc(f"clamp(18 * {BAT} / 100, 1, 18)")}"/>'
+          f'<Fill color="{col}"/></Rectangle></PartDraw>')
+    A(text(236, 270, 56, 24, 16, '%s%%', ['[BATTERY_PERCENT]'], align='START', weight='BOLD', color='#FFFFFFFF'))
+    A('</Group>')
+
     # ---- clima atual: ícone, temperatura principal em destaque, máx/mín e chance de chuva em tom secundário
     A(f'<Group x="0" y="0" width="{W_FACE}" height="{W_FACE}" name="clima"><Condition><Expressions><Expression name="wx_ok">[WEATHER.IS_AVAILABLE]</Expression></Expressions>'
       f'<Compare expression="wx_ok"><Group x="0" y="0" width="{W_FACE}" height="{W_FACE}" name="clima_ok">')
-    A(weather_icon('', 115, 275, 40, 'dnow'))
-    A(text(162, 269, 92, 50, 42, '%s°', ['[WEATHER.TEMPERATURE]'], align='START', weight='SEMI_BOLD', color='#FFFFFFFF'))
-    A(text(256, 273, 128, 24, 17, '↑%s°  ↓%s°', ['[WEATHER.DAY_TEMPERATURE_HIGH]', '[WEATHER.DAY_TEMPERATURE_LOW]'],
+    A(weather_icon('', 122, 300, 36, 'dnow'))
+    A(text(162, 296, 90, 44, 38, '%s°', ['[WEATHER.TEMPERATURE]'], align='START', weight='SEMI_BOLD', color='#FFFFFFFF'))
+    A(text(256, 299, 140, 22, 16, '↑%s°  ↓%s°', ['[WEATHER.DAY_TEMPERATURE_HIGH]', '[WEATHER.DAY_TEMPERATURE_LOW]'],
            align='START', weight='MEDIUM', color='#B3FFFFFF'))
-    A(f'<PartImage x="256" y="299" width="15" height="15" tintColor="{ACCENT}"><Image resource="wx_drop"/></PartImage>')
-    A(text(275, 294, 96, 24, 17, '%s%%', ['[WEATHER.CHANCE_OF_PRECIPITATION]'], align='START', weight='MEDIUM', color='#B3FFFFFF'))
+    A(f'<PartImage x="256" y="322" width="15" height="15" tintColor="{ACCENT}"><Image resource="wx_drop"/></PartImage>')
+    A(text(275, 318, 96, 22, 16, '%s%%', ['[WEATHER.CHANCE_OF_PRECIPITATION]'], align='START', weight='MEDIUM', color='#B3FFFFFF'))
 
-    # linha divisória sutil entre o clima atual e a grade de previsão
-    A('<PartDraw x="122" y="324" width="236" height="1"><Rectangle x="0" y="0" width="236" height="1">'
-      '<Fill color="#FF000000"><LinearGradient startX="0" startY="0" endX="236" endY="0" '
-      'colors="#00FFFFFF #24FFFFFF #00FFFFFF" positions="0 0.5 1"/></Fill></Rectangle></PartDraw>')
-
-    # ---- previsão (opção "Previsão": próximas horas ou próximos dias)
+    # ---- previsão (opção "Previsão": próximas horas ou próximos dias), só temperatura e rótulo
     cols = [150 + k * 60 for k in range(4)]
     A(f'<ListConfiguration id="fc"><ListOption id="hours"><Group x="0" y="0" width="{W_FACE}" height="{W_FACE}" name="prev_horas">')
     for k, cx in enumerate(cols):
         hr = k + 1
         A(f'<Condition><Expressions><Expression name="h{hr}">[WEATHER.HOURS.{hr}.IS_AVAILABLE]</Expression></Expressions>'
           f'<Compare expression="h{hr}"><Group x="0" y="0" width="{W_FACE}" height="{W_FACE}" name="hora{hr}">')
-        A(weather_icon(f'HOURS.{hr}.', cx - 15, 332, 30, f'dh{hr}', color='#E6FFFFFF'))
-        A(text(cx - 30, 364, 60, 24, 18, '%s°', [f'[WEATHER.HOURS.{hr}.TEMPERATURE]'], weight='MEDIUM', color='#F2FFFFFF'))
-        A(text(cx - 27, 386, 54, 20, 14, '%sh', [f'([HOUR_0_23] + {hr}) % 24'], weight='NORMAL', color='#8CFFFFFF'))
+        A(text(cx - 30, 354, 60, 24, 18, '%s°', [f'[WEATHER.HOURS.{hr}.TEMPERATURE]'], weight='MEDIUM', color='#F2FFFFFF'))
+        A(text(cx - 27, 377, 54, 20, 14, '%sh', [f'([HOUR_0_23] + {hr}) % 24'], weight='NORMAL', color='#8CFFFFFF'))
         A('</Group></Compare></Condition>')
     A(f'</Group></ListOption><ListOption id="days"><Group x="0" y="0" width="{W_FACE}" height="{W_FACE}" name="prev_dias">')
     for k, cx in enumerate(cols):
         d = k + 1
         A(f'<Condition><Expressions><Expression name="d{d}">[WEATHER.DAYS.{d}.IS_AVAILABLE]</Expression></Expressions>'
           f'<Compare expression="d{d}"><Group x="0" y="0" width="{W_FACE}" height="{W_FACE}" name="dia{d}">')
-        A(day_icon(d, cx - 15, 332, 30, color='#E6FFFFFF'))
-        A(text(cx - 30, 364, 60, 24, 16, '%s°/%s°', [f'[WEATHER.DAYS.{d}.TEMPERATURE_HIGH]', f'[WEATHER.DAYS.{d}.TEMPERATURE_LOW]'],
+        A(text(cx - 30, 354, 60, 24, 16, '%s°/%s°', [f'[WEATHER.DAYS.{d}.TEMPERATURE_HIGH]', f'[WEATHER.DAYS.{d}.TEMPERATURE_LOW]'],
                weight='MEDIUM', color='#F2FFFFFF'))
-        A(text(cx - 27, 386, 54, 20, 14, '%s', [pick(f'(([DAY_OF_WEEK] - 1 + {d}) % 7 + 1)', WEEKDAYS)],
+        A(text(cx - 27, 377, 54, 20, 14, '%s', [pick(f'(([DAY_OF_WEEK] - 1 + {d}) % 7 + 1)', WEEKDAYS)],
                weight='NORMAL', color='#8CFFFFFF'))
         A('</Group></Compare></Condition>')
     A('</Group></ListOption></ListConfiguration>')
 
     A('</Group></Compare><Default>')
-    A(text(80, 311, 320, 28, 17, 'Toque para atualizar o clima', color='#8CFFFFFF'))
+    A(text(80, 318, 320, 28, 17, 'Toque para atualizar o clima', color='#8CFFFFFF'))
     A('</Default></Condition></Group>')
 
     # tocar no clima abre o app de clima do relógio
-    A(f'<Group x="96" y="266" width="288" height="142" name="abre_clima"><Launch target="{WEATHER_APP}"/>'
-      '<PartDraw x="0" y="0" width="288" height="142"><Rectangle x="0" y="0" width="288" height="142"><Fill color="#00000000"/>'
+    A(f'<Group x="96" y="294" width="288" height="108" name="abre_clima"><Launch target="{WEATHER_APP}"/>'
+      '<PartDraw x="0" y="0" width="288" height="108"><Rectangle x="0" y="0" width="288" height="108"><Fill color="#00000000"/>'
       '</Rectangle></PartDraw></Group>')
 
     # data em maiúsculas com ponto separador e peso médio para dar protagonismo à hora
@@ -719,10 +672,8 @@ def build_watchface():
       f'<Rectangle x="0" y="0" width="{W_FACE}" height="1"><Fill color="#FF2A2D35"/></Rectangle></PartDraw>')
 
     # ---------- complicações ----------
-    for i in range(4):
-        A(corner_xml(i))
-    A(center_slot_xml(4, 'slot_top', 186, 11, 108, 52, 'UNREAD_NOTIFICATION_COUNT', 'SHORT_TEXT', top=True))
-    A(center_slot_xml(5, 'slot_bottom', 170, 414, 140, 54, 'NEXT_EVENT', 'SHORT_TEXT', top=False))
+    for slot_id, name, x, y, w, h, prov, typ, top in SLOTS:
+        A(center_slot_xml(slot_id, name, x, y, w, h, prov, typ, top=top))
 
     A('</Scene></WatchFace>')
     xml = ints('\n'.join(out))
@@ -769,6 +720,11 @@ def preview():
         u = abs(x / S - 0.5) * 2
         a = int(round(120 * max(0, 1 - u * 1.1)))
         d.line((x, hz, x, hz + k), fill=(255, 255, 255, a))
+    bat = 0.78
+    d.rectangle((BAR_X * k, hz + k, (BAR_X + BAR_W) * k, hz + 3 * k), fill=(255, 255, 255, 51))
+    d.rectangle((BAR_X * k, hz - k, (BAR_X + BAR_W * bat) * k, hz + 3 * k), fill=(127, 227, 160, 255))
+    bx = (BAR_X + BAR_W * bat) * k
+    d.ellipse((bx - 5 * k, hz - 4 * k, bx + 5 * k, hz + 6 * k), fill=(255, 255, 255, 255))
 
     fonts = 'C:/Windows/Fonts/'
     def font(name, sz):
@@ -788,51 +744,38 @@ def preview():
     d.text(((S - w_time) / 2, 126 * k), txt_time, font=f_time, fill=(255, 255, 255, 255))
     d.text((371 * k, 179 * k), '52', font=font('segoeuisl.ttf', 27), fill=(143, 211, 255, 255))
 
-    wx_now = draw_icon('cloudsun', 40 * k)
-    im.alpha_composite(wx_now, (115 * k, 275 * k))
-    d.text((162 * k, 269 * k), '20°', font=font('segoeuib.ttf', 40), fill=(255, 255, 255, 255))
-    d.text((256 * k, 275 * k), '↑21°  ↓14°', font=font('segoeui.ttf', 16), fill=(255, 255, 255, 185))
+    # bateria: ícone + porcentagem logo abaixo da linha
+    d.rectangle((206 * k, 275 * k, 228 * k, 287 * k), outline=(255, 255, 255, 230), width=round(1.5 * k))
+    d.rectangle((229 * k, 278 * k, 231 * k, 284 * k), fill=(255, 255, 255, 230))
+    d.rectangle((208 * k, 277 * k, (208 + 18 * bat) * k, 285 * k), fill=(127, 227, 160, 255))
+    d.text((236 * k, 271 * k), '78%', font=font('segoeuib.ttf', 16), fill=(255, 255, 255, 255))
+
+    # complicações do topo (valores de exemplo)
+    f_c = font('segoeuib.ttf', 15)
+    for cx_c, cy_c, txt_c in ((148, 70, '1.609'), (240, 40, '4'), (332, 70, '72')):
+        wc = d.textlength(txt_c, font=f_c)
+        d.text((cx_c * k - wc / 2, cy_c * k), txt_c, font=f_c, fill=(255, 255, 255, 235))
+
+    # clima atual
+    wx_now = draw_icon('cloudsun', 36 * k)
+    im.alpha_composite(wx_now, (122 * k, 300 * k))
+    d.text((162 * k, 298 * k), '20°', font=font('segoeuib.ttf', 36), fill=(255, 255, 255, 255))
+    d.text((256 * k, 300 * k), '↑21°  ↓14°', font=font('segoeui.ttf', 16), fill=(255, 255, 255, 185))
     drop_ic = draw_icon('drop', 15 * k)
     r, g, b, a = drop_ic.split()
     drop_tinted = Image.merge('RGBA', (r.point(lambda v: v * 143 // 255), g.point(lambda v: v * 211 // 255), b, a))
-    im.alpha_composite(drop_tinted, (256 * k, 299 * k))
-    d.text((275 * k, 295 * k), '9%', font=font('segoeui.ttf', 16), fill=(255, 255, 255, 185))
+    im.alpha_composite(drop_tinted, (256 * k, 322 * k))
+    d.text((275 * k, 318 * k), '9%', font=font('segoeui.ttf', 16), fill=(255, 255, 255, 185))
 
-    for x in range(122 * k, 358 * k):
-        u = abs((x - 240 * k) / (118 * k))
-        d.point((x, 324 * k), fill=(255, 255, 255, int(36 * (1 - u))))
-
-    for idx, (ic_name, temp_s, hr_s) in enumerate([('cloudsun', '20°', '14h'), ('cloudsun', '20°', '15h'),
-                                                   ('cloud', '19°', '16h'), ('moon', '18°', '17h')]):
+    # previsão: temperatura + hora
+    for idx, (temp_s, hr_s) in enumerate([('20°', '14h'), ('20°', '15h'), ('19°', '16h'), ('18°', '17h')]):
         cx_col = (150 + idx * 60) * k
-        ic_im = draw_icon(ic_name, 30 * k)
-        im.alpha_composite(ic_im, (int(cx_col - 15 * k), 332 * k))
         f_t = font('segoeuib.ttf', 17)
         wt = d.textlength(temp_s, font=f_t)
-        d.text((cx_col - wt / 2, 364 * k), temp_s, font=f_t, fill=(255, 255, 255, 240))
+        d.text((cx_col - wt / 2, 354 * k), temp_s, font=f_t, fill=(255, 255, 255, 240))
         f_h = font('segoeui.ttf', 14)
         wh = d.textlength(hr_s, font=f_h)
-        d.text((cx_col - wh / 2, 386 * k), hr_s, font=f_h, fill=(255, 255, 255, 140))
-
-    def draw_round_arc(a_start, a_end, col):
-        layer = Image.new('RGBA', (S, S), (0, 0, 0, 0))
-        ld = ImageDraw.Draw(layer)
-        steps = max(12, int(abs(a_end - a_start) * 3))
-        hr = THICK * k / 2.0
-        for s_i in range(steps + 1):
-            ang = math.radians(a_start + (a_end - a_start) * (s_i / steps) - 90)
-            ax = (CX + R_ARC * math.cos(ang)) * k
-            ay = (CX + R_ARC * math.sin(ang)) * k
-            ld.ellipse((ax - hr, ay - hr, ax + hr, ay + hr), fill=col)
-        im.alpha_composite(layer)
-
-    for (a0, a1, ia, from_end, bottom), prog in zip(QUADS, (0.68, 0.08, 0.60, 0.35)):
-        track_a = 34 if bottom else 46
-        draw_round_arc(a0, a1, (255, 255, 255, track_a))
-        if prog > 0:
-            span = (a1 - a0) * prog
-            s0, s1 = (a1 - span, a1) if from_end else (a0, a0 + span)
-            draw_round_arc(s0, s1, (143, 211, 255, 255))
+        d.text((cx_col - wh / 2, 377 * k), hr_s, font=f_h, fill=(255, 255, 255, 140))
 
     mask = Image.new('L', (S, S), 0)
     ImageDraw.Draw(mask).ellipse((0, 0, S - 1, S - 1), fill=255)
@@ -866,6 +809,7 @@ def main():
     draw_sky_arc().save(os.path.join(RES, 'drawable', 'sky_arc.png'))
     for name in ICONS:
         draw_icon(name).save(os.path.join(RES, 'drawable', f'wx_{name}.png'))
+    draw_bolt().save(os.path.join(RES, 'drawable', 'bat_bolt.png'))
     print('ok ->', SRC)
 
 
