@@ -1,15 +1,15 @@
-# Build e temporários
-build/
+# Saídas de build
+dist/
+faces/*/out/
 *.png
-!watchface/preview_src.png
-!watchface/src/res/drawable/*.png
+!faces/*/preview_src.png
+!faces/*/src/res/drawable/*.png
+!faces/*/store/**/*.png
 
-# Chaves de assinatura e saídas intermediárias
-watchface/out/compiled.zip
-watchface/out/unsigned.apk
-watchface/out/aligned.apk
-watchface/out/*.keystore
-watchface/out/*.idsig
+# Chaves de assinatura (nunca versionar)
+*.keystore
+*.jks
+*.idsig
 
 # Cache Python e OS
 __pycache__/
